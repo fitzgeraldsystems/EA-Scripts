@@ -1,187 +1,98 @@
-function moveNext()
-	{
-		if(this.iElem > -1)
-		{
-			this.iElem++;
-			if(this.iElem < this.Package.Count)
-			{
-				return true;
-			}
-			this.iElem = this.Package.Count;
-		}
-		return false;
-	}
+/////////////////////////////////////
+//  Name: RequirementMetrics.js
+//  Description: Script to recursively search for all requirements within a selected package
+//     Outputs to Session:
+//     * Number of requirements found
+//     * Number of requirements which have 'satisfy' relationships
+//     * Number of requirements which have 'verify' relationships
+//  Language: javascript
+//  Author: Terry Fitzgerald
+//  Date: Nov. 14th, 2020
+//  License: MIT License
 
-function item()
-	{
-		if( this.iElem > -1 && this.iElem < this.Package.Count)
-		{
-			return this.Package.GetAt(this.iElem);
-		}
-		return null;
-	}
-
-function atEnd()
-	{
-		if((this.iElem > -1) && (this.iElem < this.Package.Count))
-		{
-			return false;
-		}
-		Session.Output("at end!");
-		return true;
-	}
-
-function Check( obj)
-	{
-		if(obj == undefined)
-		{
-			Session.Output("Undefined object");
-			return false;
-		}
-		return true;
-	}
-
-function Enumerator( object )
-{
-	this.iElem = 0;
-	this.Package = object;
-	this.atEnd = atEnd;
-	this.moveNext = moveNext;
-	this.item = item;
-	this.Check = Check;
-	if(!Check(object))
-	{
-		this.iElem = -1;
-	}
-}
-
-function RecursiveModelDump()
-{
-	Session.Output( "JScript RECURSIVE MODEL DUMP EXAMPLE" );
-	Session.Output( "=======================================" );
-	
-	// Iterate through all models in the project
-	var modelEnumerator = new Enumerator( Models );
-	while ( !modelEnumerator.atEnd() )
-	{
-		var currentModel as EA.Package;
-		currentModel = modelEnumerator.item();
-		
-		// Recursively process this package
-		DumpPackage( "", currentModel );
-		
-		modelEnumerator.moveNext();
-	}
-	
-	Session.Output( "Done!" );
-}
-
-function DumpPackage( indent, thePackage )
+function SearchPackage( thePackage )
 {
 	// Cast thePackage to EA.Package so we get intellisense
 	var currentPackage as EA.Package;
 	currentPackage = thePackage;
 	
-	// Add the current package's name to the list
-	/*Session.Output( indent + currentPackage.Name + " (PackageID=" + 
-		currentPackage.PackageID + ")" );*/
+	Session.Output("Package is :" + currentPackage.Name);
 	
-	// Dump the elements this package contains
-	DumpElements( indent + "    ", currentPackage );
+	SearchElements( currentPackage );
 	
-	// Recursively process any child packages
-	var childPackageEnumerator = new Enumerator( currentPackage.Packages );
-	while ( !childPackageEnumerator.atEnd() )
-	{
-		var childPackage as EA.Package;
-		childPackage = childPackageEnumerator.item();
-		
-		DumpPackage( indent + "    ", childPackage );
-		
-		childPackageEnumerator.moveNext();
+	let packCounter = 0;
+	var numOfPackages = currentPackage.Packages.Count;
+	
+	while ( packCounter < numOfPackages ){
+		var childPackage = currentPackage.Packages.GetAt( packCounter );
+		SearchPackage ( childPackage );
+		packCounter++;
 	}
+	
 }
 
-function DumpElements( indent, thePackage )
+function SearchElements( thePackage )
 {
 	// Cast thePackage to EA.Package so we get intellisense
 	var currentPackage as EA.Package;
 	currentPackage = thePackage;
+
+	// Iterate through all elements and check for Requirements
+	let numOfElements = currentPackage.Elements.Count;
+	let elCounter = 0;
+	let nReq = numOfReq;
 	
-	// Iterate through all elements and add them to the list
-	var elementEnumerator = new Enumerator( currentPackage.Elements );
-	while ( !elementEnumerator.atEnd() )
+	while ( elCounter < numOfElements )
 	{
 		var currentElement as EA.Element;
-		currentElement = elementEnumerator.item();
-		
-		/*Session.Output( indent + "::" + currentElement.Name +
-			" (" + currentElement.Type +
-			", ID=" + currentElement.ElementID + ")" );*/
+		currentElement = currentPackage.Elements.GetAt( elCounter );
+		//Session.Output("Current element name is :" + currentElement.Name);
 		
 		if (currentElement.Type === "Requirement") {
-			Session.Output( indent + "::" + currentElement.Name +
+			Session.Output(currentElement.Name +
 				" (" + currentElement.Type +
 				", ID=" + currentElement.ElementID + ")" )
-			numOfRequirements++;
-			var i = 0;
-			var numOfRelationships = currentElement.Connectors.Count;
-			while (i < numOfRelationships) {
-				let stereotypeName = currentElement.Connectors.GetAt(i).Stereotype;
-				Session.Output(currentElement.Connectors.GetAt(i).Type);
-				Session.Output( indent + "   " + stereotypeName);
+			
+			nReq++;
+			
+			let conCounter = 0;
+			var numOfConnectors = currentElement.Connectors.Count;
+			
+			while (conCounter < numOfConnectors) {
+				let stereotypeName = currentElement.Connectors.GetAt( conCounter ).Stereotype;
+				//Session.Output("Connector Type is: " + currentElement.Connectors.GetAt( conCounter ).Type);
+				//Session.Output("Connector Stereotype is: " + stereotypeName);
+				
 				switch (stereotypeName) {
 					case "satisfy" :
-						numOfRequirementswithSatisfyRelationship++;
+						numOfReqWSatisfyRel++;
 						break;
 					case "verify" :
-						numOfRequirementswithVerifyRelationship++;
+						numOfReqWVerifyRel++;
 						break;
 					case "allocate" :
-						numOfRequirementswithAllocateRelationship++;
+						numOfReqWAllocateRel++;
 						break;
 					default :
 						break;
-					}
-				i++;
 				}
+				conCounter++;
+			}
 		}
-		
-		elementEnumerator.moveNext();
+		elCounter++;
 	}
 }
 
-/*function testRequirements()
-{
-	Session.Output("==================================");
-	Session.Output("This script will test requirements");
+let numOfReq = 0;
+let numOfReqWSatisfyRel = 0;
+let numOfReqWAllocateRel = 0;
+let numOfReqWVerifyRel = 0;
 
-	
-	var selectedPackage = Repository.GetTreeSelectedPackage(); //if element chosen is not a package than the parent package is chosen
-	Session.Output(selectedPackage.Name);
-	
-	var iteratedElement = new Enumerator(selectedPackage.Elements);
-	
-	while (!iteratedElement.atEnd()) 
-	{
-		var currentElement as EA.Element;
-		currentElement = iteratedElement.item();
-		
-		Session.Output(currentElement.Name);
-		
-		iteratedElement.moveNext();
-	}
-	Session.Output("==================================");
-}*/
+var packageOfInterest = Repository.GetTreeSelectedPackage();
 
-//RecursiveModelDump();
-let numOfRequirements = 0;
-let numOfRequirementswithSatisfyRelationship = 0;
-let numOfRequirementswithAllocateRelationship = 0;
-let numOfRequirementswithVerifyRelationship = 0;
-DumpPackage("",Repository.GetTreeSelectedPackage());
+SearchPackage(packageOfInterest);
 
-Session.Output(`Number of Requirements Found = ${numOfRequirements}.`);
-Session.Output(`Number of Requirements with Satisfy Relationships = ${numOfRequirementswithSatisfyRelationship}.`);
-Session.Output(`Number of Requirements with Verify Relationships = ${numOfRequirementswithVerifyRelationship}.`);
-Session.Output(`Number of Requirements with Allocate Relationships = ${numOfRequirementswithAllocateRelationship}.`);
+Session.Output(`Number of Requirements Found = ${numOfReq}.`);
+Session.Output(`Number of Requirements with Satisfy Relationships = ${numOfReqWSatisfyRel}.`);
+Session.Output(`Number of Requirements with Verify Relationships = ${numOfReqWVerifyRel}.`);
+Session.Output(`Number of Requirements with Allocate Relationships = ${numOfReqWAllocateRel}.`);
