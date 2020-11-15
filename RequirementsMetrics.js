@@ -1,16 +1,21 @@
 /////////////////////////////////////
 //  Name: RequirementMetrics.js
 //  Description: Script to recursively search for all requirements within a selected package
-//     Outputs to Session:
-//     * Number of requirements found
-//     * Number of requirements which have 'satisfy' relationships
-//     * Number of requirements which have 'verify' relationships
+//	Outputs to Session:
+//	* Number of requirements found
+//	* Number of requirements which have 'verify' relationships
+//	* Number of requirements which have 'satisfy' relationships
+//	* Number of requirements that are approved
+//	* Number of requirements with Issues
+//	* Number of requirements with open Issues
+//	* Number of requirements with open Defects
+//
 //  Language: javascript
 //  Author: Terry Fitzgerald
-//  Date: Nov. 14th, 2020
+//  Date: Nov. 15th, 2020
 //  License: MIT License
 
-function SearchPackage( thePackage )
+function SearchPackage( thePackage, array )
 {
 	// Cast thePackage to EA.Package so we get intellisense
 	var currentPackage as EA.Package;
@@ -18,20 +23,20 @@ function SearchPackage( thePackage )
 	
 	Session.Output("Package is :" + currentPackage.Name);
 	
-	SearchElements( currentPackage );
+	array = SearchElements( currentPackage, array );
 	
 	let packCounter = 0;
 	var numOfPackages = currentPackage.Packages.Count;
 	
 	while ( packCounter < numOfPackages ){
 		var childPackage = currentPackage.Packages.GetAt( packCounter );
-		SearchPackage ( childPackage );
+		SearchPackage ( childPackage, array );
 		packCounter++;
 	}
-	
+	return array;
 }
 
-function SearchElements( thePackage )
+function SearchElements( thePackage, array )
 {
 	// Cast thePackage to EA.Package so we get intellisense
 	var currentPackage as EA.Package;
@@ -40,7 +45,14 @@ function SearchElements( thePackage )
 	// Iterate through all elements and check for Requirements
 	let numOfElements = currentPackage.Elements.Count;
 	let elCounter = 0;
-	let nReq = numOfReq;
+	var nReq = array[0][1];
+	var numOfReqWSatisfyRel = array[1][1];
+	var numOfReqWVerifyRel = array[2][1];
+	var numOfReqWAllocateRel = array[3][1];
+	var nReqApproved = array[4][1];
+	var nReqWIssues = array[5][1];
+	var nReqWOpenIssues = array[6][1];
+	var nOpenDefects = array[7][1];
 	
 	while ( elCounter < numOfElements )
 	{
@@ -49,19 +61,16 @@ function SearchElements( thePackage )
 		//Session.Output("Current element name is :" + currentElement.Name);
 		
 		if (currentElement.Type === "Requirement") {
-			Session.Output(currentElement.Name +
+			/*Session.Output(currentElement.Name +
 				" (" + currentElement.Type +
-				", ID=" + currentElement.ElementID + ")" )
-			
-			nReq++;
+				", ID=" + currentElement.ElementID + ")" );*/
 			
 			let conCounter = 0;
 			var numOfConnectors = currentElement.Connectors.Count;
 			
 			while (conCounter < numOfConnectors) {
 				let stereotypeName = currentElement.Connectors.GetAt( conCounter ).Stereotype;
-				//Session.Output("Connector Type is: " + currentElement.Connectors.GetAt( conCounter ).Type);
-				//Session.Output("Connector Stereotype is: " + stereotypeName);
+				let typeName = currentElement.Connectors.GetAt( conCounter ).Type;
 				
 				switch (stereotypeName) {
 					case "satisfy" :
@@ -76,23 +85,98 @@ function SearchElements( thePackage )
 					default :
 						break;
 				}
+					
+				/*switch (someAttribute) {
+					case "someWantedAttributeValue" ://test whether the connected element is a particular Type
+						var currentConnector as EA.Connector;
+						currentConnector = currentElement.Connectors.GetAt( conCounter );
+
+						//Fetch supplier element
+						var supplierElement as EA.Element;
+						supplierElement = Repository.GetElementByID(currentConnector.SupplierID);
+
+						//let's test whether element type Issue
+						if (supplierElement.Type === "someTypeValue") {
+							nReqWIssues++;
+							if (supplierElement.Status !== "someStatus") {// Validated implies the Issues has been Closed
+								nReqWOpenIssues++;
+							}
+						}
+						else if (supplierElement.Type === "Change") {//TODO
+						}
+						break;
+					default :
+						break;
+				}*/
 				conCounter++;
 			}
+
+			nReq++; //iterates number of Requirements found
+			if (currentElement.Status === "Approved") {nReqApproved++;} //iterates number of Approved Requirements found
+			
+			//NOTE: the below block searched for ISSUES as created through the CONSTRUCT perspective. Issues directly created in the diagram are NOT Issue Class
+			if (currentElement.Issues.Count > 0) {
+				for ( let issCounter = 0; issCounter < currentElement.Issues.Count; issCounter++ ) {
+					var currentIssue as EA.Issue;
+					currentIssue = currentElement.Issues.GetAt( issCounter );
+					
+					switch (currentIssue.Type) {
+						case "Issue" :
+							nReqWIssues++; //iterates number of Requirements with Issues found
+							if ( currentIssue.Status !== "Complete" && currentIssue.Status !== "Rejected" ) {nReqWOpenIssues++;} //iterates number of Requirements with OPEN Issues found
+							break;
+						case "Defect" :
+							if ( currentIssue.Status !== "Complete" && currentIssue.Status !== "Rejected" ) {nOpenDefects++;} //iterates number of Requirements with OPEN Defects found
+							break;
+						case "Change" :
+							//TODO
+							break;
+						default:
+							break;
+					}
+				}
+			}
+
+			//NOTE: the below block searched for ISSUES as created through the CONSTRUCT perspective. Issues directly creating in the diagram are NOT Issue Class
+			/*if (currentElement.Issues.Count > 0) {
+				for ( let issCounter = 0; issCounter < currentElement.Issues.Count; issCounter++ ) {
+					var currentIssue as EA.Issue;
+					currentIssue = currentElement.Issues.GetAt( issCounter );
+						
+					if ( currentIssue.Status !== "Complete" && currentIssue.Status !== "Rejected" ) {nReqWOpenIssues++;} //iterates number of Requirements with OPEN Issues found
+						
+					nReqWIssues++; //iterates number of Requirements with Issues found
+				}
+			}*/
 		}
 		elCounter++;
 	}
+	
+	array[0][1] = nReq;
+	array[1][1] = numOfReqWSatisfyRel;
+	array[2][1] = numOfReqWVerifyRel;
+	array[3][1] = numOfReqWAllocateRel;
+	array[4][1] = nReqApproved;
+	array[5][1] = nReqWIssues;
+	array[6][1] = nReqWOpenIssues;
+	array[7][1] = nOpenDefects;
+	
+	return array;
 }
 
-let numOfReq = 0;
-let numOfReqWSatisfyRel = 0;
-let numOfReqWAllocateRel = 0;
-let numOfReqWVerifyRel = 0;
+let arrayRequirementMetrics = 	[['Number of Requirements:',0],//0
+								['Number of Requirements that are Satisfied:',0],//1
+								['Number of Requirements that are Verified:',0],//2
+								['Number of Requirements that are Allocated:',0],//3
+								['Number of Requirements that are Approved:',0],//4
+								['Number of Requirements with Issues:',0],//5
+								['Number of Requirements with Open Issues:',0],//6
+								['Number of Open Defects:',0]];//7
 
 var packageOfInterest = Repository.GetTreeSelectedPackage();
 
-SearchPackage(packageOfInterest);
+arrayRequirementMetrics = SearchPackage(packageOfInterest, arrayRequirementMetrics);
 
-Session.Output(`Number of Requirements Found = ${numOfReq}.`);
-Session.Output(`Number of Requirements with Satisfy Relationships = ${numOfReqWSatisfyRel}.`);
-Session.Output(`Number of Requirements with Verify Relationships = ${numOfReqWVerifyRel}.`);
-Session.Output(`Number of Requirements with Allocate Relationships = ${numOfReqWAllocateRel}.`);
+for (let i=0; i<arrayRequirementMetrics.length; i++){
+	Session.Output(arrayRequirementMetrics[i][0] + "  " + arrayRequirementMetrics[i][1]);	
+}
