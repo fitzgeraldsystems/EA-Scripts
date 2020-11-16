@@ -48,7 +48,7 @@ function SearchElements( thePackage, array )
 	var nReq = array[0][1];
 	var numOfReqWSatisfyRel = array[1][1];
 	var numOfReqWVerifyRel = array[2][1];
-	var numOfReqWAllocateRel = array[3][1];
+	//var numOfReqWAllocateRel = array[3][1];
 	var nReqApproved = array[4][1];
 	var nReqWIssues = array[5][1];
 	var nReqWOpenIssues = array[6][1];
@@ -79,9 +79,9 @@ function SearchElements( thePackage, array )
 					case "verify" :
 						numOfReqWVerifyRel++;
 						break;
-					case "allocate" :
-						numOfReqWAllocateRel++;
-						break;
+					//case "allocate" :
+					//	numOfReqWAllocateRel++;
+					//	break;
 					default :
 						break;
 				}
@@ -155,7 +155,7 @@ function SearchElements( thePackage, array )
 	array[0][1] = nReq;
 	array[1][1] = numOfReqWSatisfyRel;
 	array[2][1] = numOfReqWVerifyRel;
-	array[3][1] = numOfReqWAllocateRel;
+	//array[3][1] = numOfReqWAllocateRel;
 	array[4][1] = nReqApproved;
 	array[5][1] = nReqWIssues;
 	array[6][1] = nReqWOpenIssues;
@@ -167,7 +167,7 @@ function SearchElements( thePackage, array )
 let arrayRequirementMetrics = 	[['Number of Requirements:',0],//0
 								['Number of Requirements that are Satisfied:',0],//1
 								['Number of Requirements that are Verified:',0],//2
-								['Number of Requirements that are Allocated:',0],//3
+								['Number of Requirements that are xxx:',0],//3
 								['Number of Requirements that are Approved:',0],//4
 								['Number of Requirements with Issues:',0],//5
 								['Number of Requirements with Open Issues:',0],//6
@@ -176,7 +176,10 @@ let arrayRequirementMetrics = 	[['Number of Requirements:',0],//0
 var packageOfInterest = Repository.GetTreeSelectedPackage();
 
 arrayRequirementMetrics = SearchPackage(packageOfInterest, arrayRequirementMetrics);
-
+var string = "";
 for (let i=0; i<arrayRequirementMetrics.length; i++){
 	Session.Output(arrayRequirementMetrics[i][0] + "  " + arrayRequirementMetrics[i][1]);	
+	string = string + arrayRequirementMetrics[i][0] + "  " + arrayRequirementMetrics[i][1] + "\n";
 }
+
+Session.Prompt(string,0);
