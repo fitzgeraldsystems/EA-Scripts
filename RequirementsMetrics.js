@@ -15,6 +15,8 @@
 //  Date: Nov. 15th, 2020
 //  License: MIT License
 
+!INC EAScriptLib.JScript-Logging
+
 function SearchPackage( thePackage, array )
 {
 	// Cast thePackage to EA.Package so we get intellisense
@@ -178,7 +180,7 @@ var packageOfInterest = Repository.GetTreeSelectedPackage();
 arrayRequirementMetrics = SearchPackage(packageOfInterest, arrayRequirementMetrics);
 var string = "";
 for (let i=0; i<arrayRequirementMetrics.length; i++){
-	Session.Output(arrayRequirementMetrics[i][0] + "  " + arrayRequirementMetrics[i][1]);	
+	if (i===0) {string = "As of " + _LOGGetDisplayDate() + ":\n"};	
 	string = string + arrayRequirementMetrics[i][0] + "  " + arrayRequirementMetrics[i][1] + "\n";
 }
 
